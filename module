@@ -44,44 +44,11 @@ End If
         targetSheet.Visible = xlSheetHidden ' Hide the sheet after creation
     End If
     
-    ' Start of added code
-    ' Set the worksheet and cell references
-    Set ws = ThisWorkbook.Sheets("SheetX") ' Change to your actual sheet name
-    Set sourceCell = ws.Range("CellX")        ' Source cell (CellX)
-    Set targetCell = ws.Range("J10")       ' Target cell (J10)
-    Set targetCell2 = ws.Range("J11")
+' START
 
-    ' Check if the source cell has data validation (dropdown list)
-    If sourceCell.Validation.Type = xlValidateList Then
-        ' Get the validation formula (list source)
-        validationFormula = sourceCell.Validation.Formula1
 
-        ' Apply the same validation to the target cell
-        With targetCell.Validation
-            .Delete ' Clear any existing validation
-            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
-                xlBetween, Formula1:=validationFormula
-            .IgnoreBlank = True
-            .InCellDropdown = True
-            .ShowInput = True
-            .ShowError = True
-        End With
-        With targetCell2.Validation
-            .Delete ' Clear any existing validation
-            .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Operator:= _
-                xlBetween, Formula1:=validationFormula
-            .IgnoreBlank = True
-            .InCellDropdown = True
-            .ShowInput = True
-            .ShowError = True
-        End With
-        
-        
-    Else
-        MsgBox "Cell CellX does not have a dropdown list!", vbExclamation
-    End If
-    
-    ' End of added code
+
+' END
     
     
 ThisWorkbook.Sheets("SheetX").Range("CellX").Offset(1, 0).Value = ""
@@ -102,6 +69,7 @@ ThisWorkbook.Sheets("SheetX").Range("CellX").Offset(1, 0).Value = ""
 End Sub
 
 Sub HandleWorksheetChange(ByVal Target As Range, ByVal ws As Worksheet)
+On Error GoTo CleanExit
     Dim sourceSheet As Worksheet
     Dim sourceRange As Range
     Dim targetRange As Range
@@ -127,13 +95,18 @@ Application.DisplayAlerts = False ' Suppress warnings
         Next sourceSheet
 
         ' If sheet does not exist, show message and exit
-        If Not SheetExists Then
-            ws.Range("CellX").Offset(1, 0).Value = "No Data in " & sheetName & " Yet"
+        If Not SheetExists And ws.Range("CellX").Value <> "" Then
+            MsgBox "No Data in " & sheetName & " Yet", vbInformation
             With ws.Range("CellX").Offset(1, 0)
                 ws.Range("CellX").Font.Color = RGB(0, 0, 0)
                 .Font.Color = RGB(255, 0, 0) ' Red color
                 .Font.Bold = True ' Bold font
             End With
+            
+         ElseIf ws.Range("CellX").Value = "" Then
+         
+         GoTo CleanExit
+            
         Else
             ws.Range("CellX").Font.Color = RGB(0, 0, 0)
             ws.Range("CellX").Offset(1, 0).Value = ""
@@ -165,130 +138,8 @@ Application.DisplayAlerts = False ' Suppress warnings
         End If
 
     End If
-     Application.EnableEvents = True ' Re-enable events
-    
-End Sub
-
-
-
-Sub CopySheetsSideBySide()
-    Dim wsQ As Worksheet, wsNew As Worksheet
-    Dim ws1 As Worksheet, ws2 As Worksheet
-    Dim sheetName1 As String, sheetName2 As String
-    Dim lastRow1 As Long, lastCol1 As Long
-    Dim lastRow2 As Long, lastCol2 As Long
-    Dim destRange1 As Range, destRange2 As Range
-    Dim titleCell1 As Range, titleCell2 As Range
-    Dim cell As Range
-    Dim firstIndex As Integer, secondIndex As Integer
-    Dim firstColor As Long, secondColor As Long
-    
-    Dim colorArray(5) As Long ' Array to store RGB color values
-    Dim sourceRange As Range
-    Set sourceRange = ThisWorkbook.Sheets("SheetX").Range("AreaX")
-    colorArray(0) = RGB(180, 255, 255) ' Light Cyan
-    colorArray(1) = RGB(255, 180, 255) ' Light Pink
-    colorArray(2) = RGB(255, 255, 180) ' Light Yellow
-    colorArray(3) = RGB(180, 255, 180) ' Light Cyan
-    colorArray(4) = RGB(255, 180, 180) ' Light Pink
-    colorArray(5) = RGB(180, 180, 255) ' Light Yellow
-    
-    
-    firstIndex = Application.WorksheetFunction.RandBetween(0, 5)
-    firstColor = colorArray(firstIndex)
-    
-    Do
-    secondIndex = Application.WorksheetFunction.RandBetween(0, 5)
-    Loop While secondIndex = firstIndex ' Keep selecting until it's different
-
-    secondColor = colorArray(secondIndex)
-            
-    
-    Set wsQ = ThisWorkbook.Sheets("SheetX")
-    sheetName1 = wsQ.Range("J10").Value
-    sheetName2 = wsQ.Range("J11").Value
-    
-    ' Check if both sheets exist
-    On Error Resume Next
-    Set ws1 = ThisWorkbook.Sheets(sheetName1)
-    Set ws2 = ThisWorkbook.Sheets(sheetName2)
-    On Error GoTo 0
-    
-    If ws1 Is Nothing Or ws2 Is Nothing Then
-        MsgBox "No Scenario Found for at Least One of the Names Provided", vbExclamation
-        Exit Sub
-    End If
-    
-    ' Create or clear SheetNew
-    On Error Resume Next
-    Set wsNew = ThisWorkbook.Sheets("Compare")
-    On Error GoTo 0
-    If wsNew Is Nothing Then
-        Set wsNew = ThisWorkbook.Sheets.Add
-        wsNew.Name = "Compare"
-    Else
-        wsNew.Cells.Clear
-    End If
-    
-    ' Get last row and column for both sheets
-    lastRow1 = ws1.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-    lastCol1 = ws1.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
-    lastRow2 = ws2.Cells.Find("*", SearchOrder:=xlByRows, SearchDirection:=xlPrevious).Row
-    lastCol2 = ws2.Cells.Find("*", SearchOrder:=xlByColumns, SearchDirection:=xlPrevious).Column
-    
-    ' Add sheet names as headers
-    Set titleCell1 = wsNew.Cells(1, 1)
-    titleCell1.Value = sheetName1
-    titleCell1.Font.Bold = True
-    titleCell1.Font.Size = 16
-    Set titleCell2 = wsNew.Cells(1, lastCol1 + 2)
-    titleCell2.Value = sheetName2
-    titleCell2.Font.Bold = True
-    titleCell2.Font.Size = 16
-    ' Copy data from first sheet (shifted down by one row)
-    ws1.Range(ws1.Cells(1, 1), ws1.Cells(lastRow1, lastCol1)).Copy wsNew.Cells(2, 1)
-    ' Apply light red fill and bottom borders
-    Set destRange1 = wsNew.Range(wsNew.Cells(2, 1), wsNew.Cells(lastRow1 + 1, lastCol1))
-    
-    sourceRange.Copy
-    destRange1.PasteSpecial Paste:=xlPasteFormats
-    
-    
-    destRange1.Interior.Color = firstColor ' Light Red (Pink)
-    For Each cell In destRange1.Rows
-        cell.Borders(xlEdgeBottom).LineStyle = xlContinuous
-    Next cell
-    
-    ' Copy data from second sheet next to first sheet's data (shifted down by one row)
-    ws2.Range(ws2.Cells(1, 1), ws2.Cells(lastRow2, lastCol2)).Copy wsNew.Cells(2, lastCol1 + 2)
-    ' Apply light blue fill and bottom borders
-    Set destRange2 = wsNew.Range(wsNew.Cells(2, lastCol1 + 2), wsNew.Cells(lastRow2 + 1, lastCol1 + 1 + lastCol2))
-    
-    
-    sourceRange.Copy
-    destRange2.PasteSpecial Paste:=xlPasteFormats
-    
-    
-    destRange2.Interior.Color = secondColor ' Light Blue
-    For Each cell In destRange2.Rows
-        cell.Borders(xlEdgeBottom).LineStyle = xlContinuous
-    Next cell
-    
-    ' Apply number formatting with thousand separator and at least two decimal places
-    destRange1.NumberFormat = "#,##0.00"
-    destRange2.NumberFormat = "#,##0.00"
-    
-    ' Auto-adjust column widths
-    wsNew.Cells.EntireColumn.AutoFit
-    
-    wsNew.Activate
-    wsNew.Range("A1").Select
-    wsNew.Columns(lastCol1 + 1).Interior.Color = RGB(0, 0, 0)
-    wsNew.Columns(lastCol1 + 1).ColumnWidth = 1
+CleanExit:
     Application.EnableEvents = True
-    Application.CutCopyMode = False
 
+    
 End Sub
-
-
-
